@@ -1,9 +1,5 @@
 import streamlit as st
 import json
-from io import BytesIO
-from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
 from agent_client import create_session, query_agent
 
 # ----------------------------
@@ -17,17 +13,9 @@ st.set_page_config(
 st.title("Commercial Real Estate Credit Memo Generator")
 
 # ----------------------------
-# Supported currencies (no FX)
+# Supported currencies
 # ----------------------------
-CURRENCIES = {
-    "INR": "₹",
-    "USD": "$",
-    "EUR": "€",
-    "GBP": "£",
-    "JPY": "¥",
-    "AUD": "A$",
-    "CAD": "C$"
-}
+CURRENCIES = ["INR", "USD", "EUR", "GBP", "JPY", "AUD", "CAD"]
 
 # ----------------------------
 # Utility: split concatenated JSON
@@ -72,24 +60,6 @@ def extract_credit_memo(response):
 
 
 # ----------------------------
-# PDF generator
-# ----------------------------
-def generate_pdf(memo_text: str) -> BytesIO:
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4)
-    styles = getSampleStyleSheet()
-    story = []
-
-    for para in memo_text.split("\n\n"):
-        story.append(Paragraph(para.replace("\n", "<br/>"), styles["Normal"]))
-        story.append(Spacer(1, 12))
-
-    doc.build(story)
-    buffer.seek(0)
-    return buffer
-
-
-# ----------------------------
 # Loan Application Form
 # ----------------------------
 with st.form("loan_application_form"):
@@ -113,8 +83,7 @@ with st.form("loan_application_form"):
 
         currency = st.selectbox(
             "Currency",
-            options=list(CURRENCIES.keys()),
-            index=0
+            options=CURRENCIES
         )
 
         annual_income = st.number_input(
@@ -144,7 +113,7 @@ with st.form("loan_application_form"):
 
 
 # ----------------------------
-# Form submission handling
+# Submission handling
 # ----------------------------
 if submitted:
     if not user_id:
@@ -177,7 +146,7 @@ The credit memo must include:
 1. Executive Summary
 2. Property & Market Assessment
 3. Borrower & Financial Strength Analysis
-4. Risk Factors (including location / climate exposure if applicable)
+4. Risk Factors
 5. Overall Credit Risk Assessment
 6. Lending Recommendation
 
@@ -198,12 +167,3 @@ Do not convert currencies. Use the currency exactly as provided.
     else:
         st.subheader("Generated Credit Memo")
         st.markdown(credit_memo)
-
-        pdf_buffer = generate_pdf(credit_memo)
-
-        st.download_button(
-            label="Download Credit Memo (PDF)",
-            data=pdf_buffer,
-            file_name="credit_memo.pdf",
-            mime="application/pdf"
-        )
