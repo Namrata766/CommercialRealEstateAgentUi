@@ -76,31 +76,35 @@ with st.form("loan_application_form"):
             ["Office", "Retail", "Residential", "Industrial", "Mixed Use"]
         )
         location = st.text_input("Location (City / Region)")
-        area_sqft = st.number_input("Area (sq ft)", min_value=0)
+        area_sqft = st.number_input("Area (sq ft)", min_value=0.0, step=100.0)
 
     with col2:
         borrower_name = st.text_input("Borrower / Builder Name")
 
         currency = st.selectbox(
             "Currency",
-            options=CURRENCIES
+            options=CURRENCIES,
+            key="currency"
         )
 
         annual_income = st.number_input(
-            f"Annual Income ({currency})",
+            "Annual Income",
             min_value=0.0,
-            step=1000.0
+            step=1000.0,
+            key="annual_income"
         )
 
         loan_amount = st.number_input(
-            f"Requested Loan Amount ({currency})",
+            "Requested Loan Amount",
             min_value=0.0,
-            step=1000.0
+            step=1000.0,
+            key="loan_amount"
         )
 
         tenure_years = st.number_input(
             "Loan Tenure (Years)",
-            min_value=0
+            min_value=0,
+            step=1
         )
 
     st.subheader("Additional Banker Notes")
@@ -123,6 +127,10 @@ if submitted:
     if "session_id" not in st.session_state:
         st.session_state.session_id = create_session(user_id)
 
+    # ---- Currency values as STRING (explicit) ----
+    annual_income_str = f"{currency} {annual_income:,.2f}"
+    loan_amount_str = f"{currency} {loan_amount:,.2f}"
+
     prompt = f"""
 Generate a professional commercial real estate credit memo based on the following loan application.
 
@@ -134,13 +142,17 @@ Property Details:
 
 Borrower & Financials:
 - Borrower / Builder: {borrower_name}
-- Currency: {currency}
-- Annual Income: {currency} {annual_income:,.2f}
-- Requested Loan Amount: {currency} {loan_amount:,.2f}
+- Annual Income: {annual_income_str}
+- Requested Loan Amount: {loan_amount_str}
 - Loan Tenure: {tenure_years} years
 
 Additional Banker Notes:
 {banker_notes if banker_notes else "None provided"}
+
+Important Instructions:
+- Do NOT convert currencies
+- Use the currency and amounts exactly as provided
+- Treat monetary values as strings, not numeric conversions
 
 The credit memo must include:
 1. Executive Summary
@@ -149,9 +161,12 @@ The credit memo must include:
 4. Risk Factors
 5. Overall Credit Risk Assessment
 6. Lending Recommendation
-
-Do not convert currencies. Use the currency exactly as provided.
 """
+
+    print(f"prompt is: {prompt}")
+
+    # Optional debug
+    print("Prompt sent to agent:\n", prompt)
 
     with st.spinner("Generating credit memo..."):
         response = query_agent(
